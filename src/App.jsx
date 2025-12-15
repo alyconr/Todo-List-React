@@ -1,5 +1,5 @@
 import TodoItem from "./TodoItem"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function App() {
 
@@ -10,25 +10,57 @@ export default function App() {
 
   const   agregarTarea = () => {
 
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     if (input.trim()) {
-      setTareas([...tareas, { id: Date.now(), text: input.trim(), completed: false }]);
-      setInput("");
+      fetch(`${apiBase}/todos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input.trim() })
+      })
+        .then(r => r.json())
+        .then(nueva => {
+          setTareas(prev => [...prev, nueva]);
+          setInput("");
+        })
+        .catch(console.error);
     };
 
   }
 
 
+  useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    fetch(`${apiBase}/todos`)
+      .then(r => r.json())
+      .then(data => setTareas(data))
+      .catch(() => setTareas([]));
+  }, []);
+
+
   const toggleCompleted = (id) => {
-    setTareas(
-      tareas.map((tarea) =>
-        tarea.id === id ? { ...tarea, completed: !tarea.completed } : tarea
-      )
-    );
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const tarea = tareas.find(t => t.id === id);
+    if (!tarea) return;
+    fetch(`${apiBase}/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: !tarea.completed })
+    })
+      .then(r => r.json())
+      .then(updated => {
+        setTareas(prev => prev.map(t => t.id === id ? updated : t));
+      })
+      .catch(console.error);
   };
 
 
   const eliminarTarea = (id) => {
-    setTareas(tareas.filter((tarea) => tarea.id !== id));
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    fetch(`${apiBase}/todos/${id}`, { method: 'DELETE' })
+      .then(res => {
+        if (res.status === 204) setTareas(prev => prev.filter((tarea) => tarea.id !== id));
+      })
+      .catch(console.error);
 
   }
 
